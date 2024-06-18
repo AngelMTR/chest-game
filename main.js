@@ -34,16 +34,27 @@ function init() {
 
     // ایجاد جعبه با UV Mapping
     const geometry = new THREE.BoxGeometry(2, 2, 2);
-    const materials = [
-        new THREE.MeshBasicMaterial({ map: boxTexture }), // right
-        new THREE.MeshBasicMaterial({ map: boxTexture }), // left
-        new THREE.MeshBasicMaterial({ map: boxTexture }), // top
-        new THREE.MeshBasicMaterial({ map: boxTexture }), // bottom
-        new THREE.MeshBasicMaterial({ map: boxTexture }), // front
-        new THREE.MeshBasicMaterial({ map: boxTexture })  // back
-    ];
 
-    chest = new THREE.Mesh(geometry, materials);
+    const uvs = geometry.attributes.uv.array;
+    for (let i = 0; i < uvs.length; i += 2) {
+        const u = uvs[i];
+        const v = uvs[i + 1];
+
+        if (u === 0) {
+            uvs[i] = 0.33;
+        } else if (u === 1) {
+            uvs[i] = 0.66;
+        }
+
+        if (v === 0) {
+            uvs[i + 1] = 0.5;
+        } else if (v === 1) {
+            uvs[i + 1] = 1;
+        }
+    }
+
+    const material = new THREE.MeshBasicMaterial({ map: boxTexture });
+    chest = new THREE.Mesh(geometry, material);
     scene.add(chest);
 
     camera.position.z = 5;
@@ -69,7 +80,7 @@ function onClick(event) {
         if (Math.random() < jackpotChance) {
             isJackpot = true;
             jackpotSound.play();
-            chest.material.forEach(material => material.map = jackpotTexture);
+            chest.material.map = jackpotTexture;
         } else {
             dingSound.play();
         }
