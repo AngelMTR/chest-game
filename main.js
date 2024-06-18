@@ -1,71 +1,86 @@
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
+let scene, camera, renderer, chest, controls;
+let isJackpot = false;
+let clickCount = 0;
 
-// بارگذاری تصاویر
-const boxImage = new Image();
-boxImage.src = 'assets/box.png';
-
-const jackpotImage = new Image();
-jackpotImage.src = 'assets/jackpot.png';
-
-// تنظیمات بازی
-const boxWidth = 100;
-const boxHeight = 100;
-const numBoxes = 5;
 const jackpotChance = 0.1; // 10% شانس برنده شدن جکپات
 
-// موقعیت جعبه‌ها
-const boxes = [];
-for (let i = 0; i < numBoxes; i++) {
-    boxes.push({
-        x: i * (boxWidth + 20) + 50,
-        y: canvas.height / 2 - boxHeight / 2,
-        isJackpot: Math.random() < jackpotChance,
-        opened: false
-    });
+// صداها
+const dingSound = new Audio('assets/ding.mp3');
+const jackpotSound = new Audio('assets/jackpot.mp3');
+
+function init() {
+    // تنظیمات صحنه
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // کنترل‌ها
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableZoom = false;
+    controls.enablePan = false;
+
+    // نورپردازی
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    scene.add(ambientLight);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+    directionalLight.position.set(5, 5, 5).normalize();
+    scene.add(directionalLight);
+
+    // جعبه (Chest)
+    const textureLoader = new THREE.TextureLoader();
+    const boxTexture = textureLoader.load('assets/box.png');
+    
+    // تنظیم UV Mapping برای تکسچر
+    const materials = [
+        new THREE.MeshBasicMaterial({ map: boxTexture }), // right
+        new THREE.MeshBasicMaterial({ map: boxTexture }), // left
+        new THREE.MeshBasicMaterial({ map: boxTexture }), // top
+        new THREE.MeshBasicMaterial({ map: boxTexture }), // bottom
+        new THREE.MeshBasicMaterial({ map: boxTexture }), // front
+        new THREE.MeshBasicMaterial({ map: boxTexture })  // back
+    ];
+    
+    const boxGeometry = new THREE.BoxGeometry(2, 2, 2);
+    chest = new THREE.Mesh(boxGeometry, materials);
+    scene.add(chest);
+
+    camera.position.z = 5;
+
+    // رویداد کلیک
+    window.addEventListener('click', onClick, false);
+
+    animate();
 }
 
-// رویداد کلیک
-canvas.addEventListener('click', (e) => {
-    const rect = canvas.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
+function onClick(event) {
+    // محاسبه مختصات ماوس
+    const mouse = new THREE.Vector2();
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
-    boxes.forEach(box => {
-        if (
-            mouseX > box.x &&
-            mouseX < box.x + boxWidth &&
-            mouseY > box.y &&
-            mouseY < box.y + boxHeight &&
-            !box.opened
-        ) {
-            box.opened = true;
-        }
-    });
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObject(chest);
 
-    draw();
-});
-
-// رسم بازی
-function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    boxes.forEach(box => {
-        if (box.opened) {
-            if (box.isJackpot) {
-                ctx.drawImage(jackpotImage, box.x, box.y, boxWidth, boxHeight);
-            } else {
-                ctx.fillStyle = '#FF0000';
-                ctx.fillRect(box.x, box.y, boxWidth, boxHeight);
-                ctx.fillStyle = '#000';
-                ctx.fillText('Try Again', box.x + 10, box.y + 50);
-            }
+    if (intersects.length > 0 && !isJackpot) {
+        clickCount++;
+        if (Math.random() < jackpotChance) {
+            isJackpot = true;
+            jackpotSound.play();
+            const jackpotTexture = textureLoader.load('assets/jackpot.png');
+            chest.material.map = jackpotTexture;
         } else {
-            ctx.drawImage(boxImage, box.x, box.y, boxWidth, boxHeight);
+            dingSound.play();
         }
-    });
+    }
 }
 
-// بارگذاری اولیه تصاویر و رسم بازی
-boxImage.onload = draw;
-jackpotImage.onload = draw;
+function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+}
+
+window.onload = init;
