@@ -1,6 +1,5 @@
-let scene, camera, renderer, chest, controls;
-let isJackpot = false;
-let clickCount = 0;
+let scene, camera, renderer, controls;
+let chest, isJackpot = false, clickCount = 0;
 
 const jackpotChance = 0.1; // 10% شانس برنده شدن جکپات
 
@@ -28,11 +27,13 @@ function init() {
     directionalLight.position.set(5, 5, 5).normalize();
     scene.add(directionalLight);
 
-    // جعبه (Chest)
+    // بارگذاری تکسچر
     const textureLoader = new THREE.TextureLoader();
-    const boxTexture = textureLoader.load('assets/box.png');
-    
-    // تنظیم UV Mapping برای تکسچر
+    const boxTexture = textureLoader.load('assets/box_texture.png');
+    const jackpotTexture = textureLoader.load('assets/jackpot_texture.png');
+
+    // ایجاد جعبه با UV Mapping
+    const geometry = new THREE.BoxGeometry(2, 2, 2);
     const materials = [
         new THREE.MeshBasicMaterial({ map: boxTexture }), // right
         new THREE.MeshBasicMaterial({ map: boxTexture }), // left
@@ -41,9 +42,8 @@ function init() {
         new THREE.MeshBasicMaterial({ map: boxTexture }), // front
         new THREE.MeshBasicMaterial({ map: boxTexture })  // back
     ];
-    
-    const boxGeometry = new THREE.BoxGeometry(2, 2, 2);
-    chest = new THREE.Mesh(boxGeometry, materials);
+
+    chest = new THREE.Mesh(geometry, materials);
     scene.add(chest);
 
     camera.position.z = 5;
@@ -69,8 +69,7 @@ function onClick(event) {
         if (Math.random() < jackpotChance) {
             isJackpot = true;
             jackpotSound.play();
-            const jackpotTexture = textureLoader.load('assets/jackpot.png');
-            chest.material.map = jackpotTexture;
+            chest.material.forEach(material => material.map = jackpotTexture);
         } else {
             dingSound.play();
         }
